@@ -1,8 +1,20 @@
-from typing import List, Optional
+from typing import List
 from pydantic import BaseModel
+
+
+# --- User schemas ---
+
+class SegmentInUser(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        orm_mode = True
+
 
 class UserBase(BaseModel):
     name: str
+
 
 class UserCreate(UserBase):
     pass
@@ -10,7 +22,17 @@ class UserCreate(UserBase):
 
 class User(UserBase):
     id: int
-    segments: List["Segment"] = []
+    segments: List[SegmentInUser] = []
+
+    class Config:
+        orm_mode = True
+
+
+# --- Segment schemas ---
+
+class UserInSegment(BaseModel):
+    id: int
+    name: str
 
     class Config:
         orm_mode = True
@@ -26,11 +48,13 @@ class SegmentCreate(SegmentBase):
 
 class Segment(SegmentBase):
     id: int
-    users: List[int] = []
+    users: List[UserInSegment] = []
 
     class Config:
         orm_mode = True
 
+
+# --- For assigning/unassigning ---
 
 class UserSegmentCreate(BaseModel):
     user_id: int

@@ -1,12 +1,11 @@
-from sys import prefix
-
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from database import get_db
-from schemas import Segment, SegmentCreate
-from models import Segment as SegmentModel, UserSegment, User as UserModel
 from typing import List
-from sqlalchemy.sql.expression import func
+import random
+
+from database import get_db
+from models import Segment as SegmentModel, UserSegment, User as UserModel
+from schemas import Segment, SegmentCreate
 
 router = APIRouter(
     prefix="/segments",
@@ -24,7 +23,7 @@ def create_segment(segment: SegmentCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=List[Segment])
-def list_segments(db: Session = Depends(get_db)):
+def get_segments(db: Session = Depends(get_db)):
     return db.query(SegmentModel).all()
 
 
@@ -33,31 +32,37 @@ def delete_segment(segment_id: int, db: Session = Depends(get_db)):
     segment = db.query(SegmentModel).filter(SegmentModel.id == segment_id).first()
     if not segment:
         raise HTTPException(status_code=404, detail="Segment not found")
+
     db.delete(segment)
     db.commit()
-    return {"message": "Segment deleted"}
+    return {"message": "Segment and its user relations deleted"}
 
 
 @router.get("/by-segment/{segment_id}", response_model=List[int])
-def get_users_by_segment(segment_id: int, percentage: float, db: Session = Depends(get_db)):
-    relations = db.query(UserSegment).filter(UserSegment.segment_id == segment_id).all()
-    return [rel.user_id for rel in relations]
-
-
-@router.post("/assign-random")
-def assign_random_users(segment_id: int, percentage: float, db: Session = Depends(get_db)):
-    if not (0 < percentage <= 100):
-        raise HTTPException(status_code=400, detail="Percentage must be between 0 and 100")
-    total_user = db.query(UserModel).count()
-    sample_size = int((percentage / 100) * total_user)
-    users = db.query(UserModel).order_by(func.random()).limit(sample_size).all()
+def get_users_by_segment(segment_id: int, db: Session = Depends(get_db)):
     segment = db.query(SegmentModel).filter(SegmentModel.id == segment_id).first()
     if not segment:
         raise HTTPException(status_code=404, detail="Segment not found")
+
+    return [user.id for user in segment.users]
+
+
+@router.post("/assign-random")
+def assign_random_users(db: Session = Depends(get_db)):
+    segments = db.query(SegmentModel).all()
+    users = db.query(UserModel).all()
+
+    if not segments or not users:
+        raise HTTPException(status_code=400, detail="No segments or users available.")
+
+    assigned_count = 0
+
     for user in users:
-        existing = db.query(UserSegment).filter_by(user_id=user.id, segment_id=segment_id).first()
+        segment = random.choice(segments)
+        existing = db.query(UserSegment).filter_by(user_id=user.id, segment_id=segment.id).first()
         if not existing:
-            db.add(UserSegment(user_id=user.id, segment_id=segment_id))
+            db.add(UserSegment(user_id=user.id, segment_id=segment.id))
+            assigned_count += 1
 
     db.commit()
-    return {"message": f"{sample_size} users assigned to segment '{segment.name}'"}
+    return {"message": f"{assigned_count} users randomly assigned to segments"}
