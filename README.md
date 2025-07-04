@@ -26,11 +26,15 @@ venv\Scripts\activate     # для Windows
 Для этого пропишите в терминале:
 pip install -r requirements.txt
 
-4.Запустите сервер
+4. Для создание базы данных, пропишите следующую команду
+
+python init_db.py 
+
+5. Запустите сервер
 
 uvicorn main:app --reload
 
-5. Откройте документацию
+6. Откройте документацию
 
 http://127.0.0.1:8000/docs
 
