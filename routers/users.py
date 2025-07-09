@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
-
 from database import get_db
 from models import User as UserModel, UserSegment, Segment as SegmentModel
 from schemas import User, UserCreate, UserSegmentCreate
@@ -37,10 +35,7 @@ def assign_user_to_segment(data: UserSegmentCreate, db: Session = Depends(get_db
     if not user or not segment:
         raise HTTPException(status_code=404, detail="User or Segment not found")
 
-    existing = db.query(UserSegment).filter_by(
-        user_id=data.user_id,
-        segment_id=data.segment_id
-    ).first()
+    existing = db.query(UserSegment).filter_by(user_id=data.user_id, segment_id=data.segment_id).first()
 
     if existing:
         raise HTTPException(status_code=400, detail="User already assigned to this segment")
@@ -53,10 +48,7 @@ def assign_user_to_segment(data: UserSegmentCreate, db: Session = Depends(get_db
 
 @router.delete("/unassign/")
 def unassign_user_from_segment(data: UserSegmentCreate, db: Session = Depends(get_db)):
-    relation = db.query(UserSegment).filter_by(
-        user_id=data.user_id,
-        segment_id=data.segment_id
-    ).first()
+    relation = db.query(UserSegment).filter_by(user_id=data.user_id, segment_id=data.segment_id).first()
 
     if not relation:
         raise HTTPException(status_code=404, detail="Relation not found")
